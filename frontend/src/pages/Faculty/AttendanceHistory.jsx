@@ -220,13 +220,40 @@ export default function AttendanceHistory() {
                                   <th key={s.id} className="px-6 py-4 text-center whitespace-nowrap group">
                                     <div className="flex items-center justify-center gap-2">
                                       <span>Session {idx + 1}</span>
-                                      <button
-                                        onClick={() => handleDeleteSession(s.id)}
-                                        className="p-1 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-all"
-                                        title="Delete Session"
-                                      >
-                                        <Trash2 size={14} />
-                                      </button>
+                                      <div className="flex items-center gap-1">
+                                        <button
+                                          onClick={async () => {
+                                            try {
+                                              const res = await api.get(`/attendance/faculty/export/feedback/excel/${s.id}`, {
+                                                responseType: 'blob',
+                                              });
+                                              const url = window.URL.createObjectURL(new Blob([res.data]));
+                                              const link = document.createElement('a');
+                                              link.href = url;
+                                              const timeStr = s.time_slot ? s.time_slot.replace(/:/g, '-') : s.id;
+                                              link.download = `Feedback_Session_${timeStr}.xlsx`;
+                                              document.body.appendChild(link);
+                                              link.click();
+                                              window.URL.revokeObjectURL(url);
+                                              link.remove();
+                                            } catch (err) {
+                                              console.error("Failed to download feedback", err);
+                                              alert("Failed to download feedback excel.");
+                                            }
+                                          }}
+                                          className="p-1 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 rounded transition-all"
+                                          title="Download Session Feedback"
+                                        >
+                                          <Download size={14} />
+                                        </button>
+                                        <button
+                                          onClick={() => handleDeleteSession(s.id)}
+                                          className="p-1 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-all"
+                                          title="Delete Session"
+                                        >
+                                          <Trash2 size={14} />
+                                        </button>
+                                      </div>
                                     </div>
                                     <div className="text-xs font-normal text-slate-500">{s.start_time}</div>
                                   </th>

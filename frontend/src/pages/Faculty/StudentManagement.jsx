@@ -12,7 +12,11 @@ export default function StudentManagement() {
   
   // Edit modal state
   const [editingStudent, setEditingStudent] = useState(null);
-  const [editForm, setEditForm] = useState({ name: '', campus_id: '', email: '', specialisation: '' });
+  const [editForm, setEditForm] = useState({ name: '', campus_id: '', email: '', specialisation: '', password: '' });
+  
+  // Add modal state
+  const [addingStudent, setAddingStudent] = useState(false);
+  const [addForm, setAddForm] = useState({ name: '', campus_id: '', specialisation: '', password: '' });
 
   useEffect(() => {
     fetchStudents();
@@ -94,7 +98,8 @@ export default function StudentManagement() {
       name: student.name || '',
       campus_id: student.campus_id || '',
       email: student.email || '',
-      specialisation: student.specialisation || ''
+      specialisation: student.specialisation || '',
+      password: ''
     });
   };
 
@@ -111,9 +116,23 @@ export default function StudentManagement() {
     }
   };
 
+  const handleAddSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await api.post('/students', addForm);
+      setStudents([...students, res.data.student]);
+      setAddingStudent(false);
+      setAddForm({ name: '', campus_id: '', specialisation: '', password: '' });
+      setMessage('Student added successfully');
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Error adding student');
+    }
+  };
+
   const filtered = students.filter(s => 
-    String(s.name || '').toLowerCase().includes(search.toLowerCase()) || 
-    String(s.campus_id || '').toLowerCase().includes(search.toLowerCase())
+    String(s.name || '').trim().toLowerCase().includes(search.trim().toLowerCase()) || 
+    String(s.campus_id || '').trim().toLowerCase().includes(search.trim().toLowerCase())
   );
 
   return (
@@ -134,16 +153,28 @@ export default function StudentManagement() {
 
       <div className="bg-[#1e293b] border border-slate-700/50 rounded-2xl shadow-xl relative z-10">
         <div className="p-4 border-b border-slate-700/50 flex gap-4 sticky top-0 bg-[#1e293b] z-20 rounded-t-2xl">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-            <input 
-              type="text" 
-              placeholder="Search by Name or Campus ID..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-slate-800/50 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-white focus:outline-none focus:border-blue-500 transition-colors"
-            />
+          <div className="relative flex-1 max-w-md flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+              <input 
+                type="text" 
+                placeholder="Search by Name or Campus ID..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full bg-slate-800/50 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-white focus:outline-none focus:border-blue-500 transition-colors"
+              />
+            </div>
+            <span className="text-xs text-slate-400 whitespace-nowrap">
+              {filtered.length} / {students.length} found
+            </span>
           </div>
+          <button
+            onClick={() => setAddingStudent(true)}
+            className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl flex items-center gap-2 transition-all font-medium whitespace-nowrap shadow-lg shadow-blue-500/20"
+          >
+            <Users size={18} />
+            Add Student
+          </button>
           {selectedStudents.size > 0 && (
             <button 
               onClick={handleBulkDelete}
@@ -157,7 +188,7 @@ export default function StudentManagement() {
 
         <div className="overflow-x-auto rounded-b-2xl">
           <table className="w-full text-left text-sm text-slate-300">
-            <thead className="text-xs uppercase bg-slate-800 text-slate-400 sticky top-[73px] z-10 shadow-sm">
+            <thead className="text-xs uppercase bg-slate-800 text-slate-400 border-b border-slate-700/50">
               <tr>
                 <th className="px-6 py-4 w-12 text-center">
                   <input 
@@ -272,12 +303,89 @@ export default function StudentManagement() {
                     className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 transition-colors"
                   />
                 </div>
-                <div className="pt-4 flex justify-end gap-3">
-                  <button type="button" onClick={() => setEditingStudent(null)} className="px-4 py-2 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors">
-                    Cancel
-                  </button>
-                  <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg flex items-center gap-2 transition-colors">
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-1">New Password <span className="text-xs text-slate-500 font-normal">(Leave blank to keep current)</span></label>
+                  <input 
+                    type="password" 
+                    value={editForm.password}
+                    onChange={e => setEditForm({...editForm, password: e.target.value})}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                    placeholder="••••••••"
+                  />
+                </div>
+                <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+                  <button type="button" onClick={() => setEditingStudent(null)} className="px-4 py-2 text-slate-400 hover:text-white transition-colors">Cancel</button>
+                  <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors shadow-lg shadow-blue-500/20 flex items-center gap-2">
                     <Save size={18} /> Save Changes
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Add Modal */}
+      <AnimatePresence>
+        {addingStudent && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl"
+            >
+              <div className="p-6 border-b border-slate-800 flex justify-between items-center">
+                <h3 className="text-xl font-bold text-white">Add New Student</h3>
+                <button onClick={() => setAddingStudent(false)} className="text-slate-400 hover:text-white transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+              <form onSubmit={handleAddSubmit} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-1">Full Name</label>
+                  <input 
+                    type="text" 
+                    value={addForm.name}
+                    onChange={e => setAddForm({...addForm, name: e.target.value})}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-1">Campus ID</label>
+                  <input 
+                    type="text" 
+                    value={addForm.campus_id}
+                    onChange={e => setAddForm({...addForm, campus_id: e.target.value})}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-1">Specialisation</label>
+                  <input 
+                    type="text" 
+                    value={addForm.specialisation}
+                    onChange={e => setAddForm({...addForm, specialisation: e.target.value})}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-1">Password <span className="text-xs text-slate-500 font-normal">(Defaults to 'password123')</span></label>
+                  <input 
+                    type="password" 
+                    value={addForm.password}
+                    onChange={e => setAddForm({...addForm, password: e.target.value})}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                    placeholder="password123"
+                  />
+                </div>
+                <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+                  <button type="button" onClick={() => setAddingStudent(false)} className="px-4 py-2 text-slate-400 hover:text-white transition-colors">Cancel</button>
+                  <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors shadow-lg shadow-blue-500/20 flex items-center gap-2">
+                    <Save size={18} /> Add Student
                   </button>
                 </div>
               </form>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { QrCode, Clock, CheckCircle, AlertCircle, Loader2, ChevronRight } from 'lucide-react';
+import { QrCode, Clock, CheckCircle, AlertCircle, Loader2, ChevronRight, Lock } from 'lucide-react';
 import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 
@@ -14,12 +14,19 @@ export default function StudentDashboard() {
   const location = useLocation();
   const [showSuccessBanner, setShowSuccessBanner] = useState(location.state?.attendanceSuccess || false);
 
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordMsg, setPasswordMsg] = useState({ text: '', type: '' });
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
   useEffect(() => {
     if (showSuccessBanner) {
       const timer = setTimeout(() => setShowSuccessBanner(false), 5000);
       return () => clearTimeout(timer);
     }
   }, [showSuccessBanner]);
+
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -35,6 +42,31 @@ export default function StudentDashboard() {
     };
     fetchStats();
   }, []);
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      setPasswordMsg({ text: "New passwords do not match", type: 'error' });
+      return;
+    }
+    
+    setIsChangingPassword(true);
+    setPasswordMsg({ text: '', type: '' });
+    try {
+      const res = await api.post('/auth/change-password', {
+        old_password: oldPassword,
+        new_password: newPassword
+      });
+      setPasswordMsg({ text: res.data.message, type: 'success' });
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      setPasswordMsg({ text: err.response?.data?.detail || "Failed to update password", type: 'error' });
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -79,8 +111,26 @@ export default function StudentDashboard() {
             </div>
             
             <div className="bg-[#1e293b] border border-slate-700/50 rounded-2xl p-4 flex items-center gap-4 min-w-[200px]">
-              <div className="w-14 h-14 rounded-full border-4 border-blue-500 flex items-center justify-center">
-                <span className="text-lg font-bold text-white">{stats.percentage}%</span>
+              <div className="relative w-14 h-14 flex items-center justify-center">
+                <svg className="w-full h-full transform -rotate-90 absolute inset-0" viewBox="0 0 36 36">
+                  <path
+                    className="text-slate-700"
+                    strokeWidth="3"
+                    stroke="currentColor"
+                    fill="none"
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  />
+                  <path
+                    className="text-blue-500 transition-all duration-1000 ease-out"
+                    strokeDasharray={`${stats.percentage}, 100`}
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    stroke="currentColor"
+                    fill="none"
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  />
+                </svg>
+                <span className="text-sm font-bold text-white relative z-10">{stats.percentage}%</span>
               </div>
               <div>
                 <p className="text-sm text-slate-400">Overall</p>
@@ -202,6 +252,64 @@ export default function StudentDashboard() {
                   </motion.div>
                 ))
               )}
+            </div>
+          </section>
+
+          {/* Change Password Section */}
+          <section className="mt-10">
+            <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <Lock size={20} className="text-blue-400" /> Account Security
+            </h3>
+            <div className="bg-[#1e293b] border border-slate-700/50 p-6 rounded-xl">
+              <h4 className="text-slate-200 font-medium mb-4">Change Password</h4>
+              
+              {passwordMsg.text && (
+                <div className={`mb-4 p-3 rounded-lg text-sm ${passwordMsg.type === 'success' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}`}>
+                  {passwordMsg.text}
+                </div>
+              )}
+
+              <form onSubmit={handleChangePassword} className="space-y-4 max-w-sm">
+                <div>
+                  <label className="block text-sm text-slate-400 mb-1">Current Password</label>
+                  <input 
+                    type="password" 
+                    value={oldPassword}
+                    onChange={(e) => setOldPassword(e.target.value)}
+                    className="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-white outline-none focus:border-blue-500/50"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-400 mb-1">New Password</label>
+                  <input 
+                    type="password" 
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-white outline-none focus:border-blue-500/50"
+                    required
+                    minLength={8}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-400 mb-1">Confirm New Password</label>
+                  <input 
+                    type="password" 
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-white outline-none focus:border-blue-500/50"
+                    required
+                    minLength={8}
+                  />
+                </div>
+                <button 
+                  type="submit" 
+                  disabled={isChangingPassword}
+                  className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                >
+                  {isChangingPassword ? <Loader2 size={16} className="animate-spin" /> : "Update Password"}
+                </button>
+              </form>
             </div>
           </section>
         </div>
