@@ -4,21 +4,18 @@ import basicSsl from '@vitejs/plugin-basic-ssl'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/',
   plugins: [react(), basicSsl()],
-  build: {
-    outDir: 'dist',
-  },
   server: {
     allowedHosts: true,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8000',
+        target: 'https://deeksharambh2026-production.up.railway.app',
         changeOrigin: true
       },
       '/ws': {
-        target: 'http://127.0.0.1:8000',
-        ws: true
+        target: 'https://deeksharambh2026-production.up.railway.app',
+        ws: true,
+        changeOrigin: true
       }
     }
   }
